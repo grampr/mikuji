@@ -33,27 +33,31 @@ type FortuneResult = {
 
 const TONE_STYLES: Record<
   FortuneTone,
-  { border: string; text: string; stamp: string }
+  { border: string; text: string; stamp: string; stampBox: string }
 > = {
   great: {
     border: "border-red-700",
     text: "text-red-700",
     stamp: "border-red-600 text-red-600",
+    stampBox: "border-red-700 text-red-700",
   },
   good: {
     border: "border-red-500",
     text: "text-red-600",
     stamp: "border-red-500 text-red-500",
+    stampBox: "border-red-600 text-red-700",
   },
   middle: {
     border: "border-amber-700",
     text: "text-amber-800",
     stamp: "border-amber-700 text-amber-700",
+    stampBox: "border-amber-700 text-amber-900",
   },
   bad: {
     border: "border-slate-700",
     text: "text-slate-700",
     stamp: "border-slate-600 text-slate-600",
+    stampBox: "border-slate-700 text-slate-800",
   },
 };
 
@@ -566,115 +570,117 @@ function HomeContent() {
     content = (
       <div className="washi-texture flex min-h-screen flex-col items-center px-4 pb-10 pt-20">
         <SakuraEffect />
-        <div
-          className={`relative z-10 w-full max-w-lg overflow-hidden border-t-8 bg-white shadow-2xl animate-fade-in-up ${tone.border}`}
-        >
-          <div className="relative px-5 py-7 sm:p-10">
-            {/* 見出し：左右の縦書き + 中央の運勢 */}
-            <div className="mb-6 flex items-stretch justify-between gap-3 border-b border-gray-300 pb-6">
-              <div className="vertical-rl shrink-0 font-mincho text-sm tracking-widest text-gray-500">
-                令和八年新春
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-                <div className={`inline-block border-2 p-1 ${tone.border}`}>
-                  <div className={`border px-3 py-1 ${tone.border}`}>
-                    <span
-                      className={`block font-mincho text-xs tracking-widest ${tone.text}`}
-                    >
-                      一撃必中
-                    </span>
-                  </div>
-                </div>
-                <h2
-                  className={`font-brush mt-3 whitespace-nowrap leading-none text-black ${
-                    finalResult.rank.length >= 3
-                      ? "text-5xl sm:text-6xl"
-                      : "text-6xl sm:text-7xl"
-                  }`}
-                >
-                  {finalResult.rank}
-                </h2>
-                <div className="mt-3 font-mincho text-xs text-gray-400">
-                  平均精度: {finalResult.avgScore.toFixed(1)}%
-                </div>
-              </div>
-              <div className="vertical-rl shrink-0 font-mincho text-sm tracking-widest text-gray-500">
+        <div className="omikuji-slip relative z-10 w-full max-w-md animate-fade-in-up">
+          <div className="omikuji-frame px-3 pb-4 pt-3 sm:px-5 sm:pb-6 sm:pt-4">
+            {/* 札の頭：社名・御神籤・札番号 */}
+            <header className="flex items-center justify-between border-b-2 border-double border-[#b91c1c] pb-2">
+              <span className="font-mincho text-[11px] tracking-widest text-[#7f1d1d]">
+                令和八年
+                <br />
+                新春
+              </span>
+              <h2 className="font-brush text-3xl tracking-[0.4em] text-[#b91c1c] sm:text-4xl">
+                御神籤
+              </h2>
+              <span className="font-mincho text-right text-[11px] tracking-widest text-[#7f1d1d]">
+                一撃必中
+                <br />
                 第{toKanjiNumber(finalResult.ticketNumber)}番
-              </div>
-            </div>
+              </span>
+            </header>
 
-            {/* 和歌：句ごとに一行ずつ縦書き。下の句は一段下げる */}
-            <div className="mb-6 flex items-end justify-center gap-4">
-              <div className="vertical-rl font-brush text-xl leading-relaxed text-gray-800 sm:text-2xl">
+            {/* 上段：運勢・和歌・解説（右から左へ読む） */}
+            <section className="flex flex-row-reverse items-stretch justify-center gap-4 py-5 sm:gap-10">
+              <div className="flex shrink-0 flex-col items-center gap-2">
+                <div
+                  className={`vertical-rl flex items-center justify-center border-[3px] border-double px-1 py-3 sm:px-2 ${tone.stampBox}`}
+                >
+                  <span className="font-brush text-4xl leading-none tracking-[0.15em] sm:text-5xl">
+                    {finalResult.rank}
+                  </span>
+                </div>
+                <span className="mt-auto whitespace-nowrap font-mincho text-[10px] text-gray-500">
+                  精度 {finalResult.avgScore.toFixed(1)}%
+                </span>
+              </div>
+
+              <div className="vertical-rl shrink-0 font-brush text-lg leading-[1.7] text-gray-900 sm:text-2xl">
                 {phrases.map((phrase, i) => (
                   <span
                     key={i}
                     className="block whitespace-nowrap"
                     style={{
-                      paddingInlineStart: i >= 3 ? "1.5em" : 0,
-                      marginBlockStart: i === 3 ? "0.5em" : 0,
+                      paddingInlineStart: i >= 3 ? "1.5em" : "0.25em",
+                      marginBlockStart: i === 3 ? "0.4em" : 0,
                     }}
                   >
                     {phrase}
                   </span>
                 ))}
               </div>
-              <div
-                aria-hidden
-                className={`pointer-events-none flex h-16 w-16 shrink-0 rotate-12 items-center justify-center rounded-full border-4 opacity-40 ${tone.stamp}`}
-              >
-                <span className="font-brush text-sm leading-tight">
-                  新春
-                  <br />
-                  {finalResult.rank}
-                </span>
-              </div>
-            </div>
 
-            <div className="mb-6 rounded border border-gray-100 bg-gray-50 p-4 font-mincho text-sm leading-relaxed text-gray-600">
-              <span className="mb-1 block font-bold text-red-800">
-                【現代語訳】
-              </span>
-              {finalResult.translation}
-            </div>
+            </section>
 
-            <div className="grid grid-cols-1 gap-x-6 gap-y-3 text-left font-mincho sm:grid-cols-2">
+            {/* 解説：幅を固定した縦書きブロック（右から左へ折り返す） */}
+            <section className="border-y border-dashed border-[#b91c1c]/50 py-3">
+              <p className="vertical-rl mx-auto h-[120px] w-full font-mincho text-[13px] leading-[1.9] text-gray-700">
+                <span className="font-bold text-[#b91c1c]">【解説】</span>
+                {finalResult.translation}
+              </p>
+            </section>
+
+            {/* 下段：各項目を縦の欄で並べる */}
+            <section className="flex flex-row-reverse flex-wrap justify-center border-b border-[#b91c1c]/60 py-3">
               {detailKeys.map((key) => (
                 <div
                   key={key}
-                  className="flex items-baseline gap-2 border-b border-gray-200 pb-2 sm:flex-col sm:items-start sm:gap-0.5"
+                  className="flex w-[28px] flex-col items-center border-l border-[#b91c1c]/25 py-1 first:border-l-0 sm:w-[36px]"
                 >
-                  <span className="shrink-0 text-sm font-bold text-red-800">
-                    【{DETAIL_LABELS[key]}】
+                  <span className="vertical-rl bg-[#b91c1c] px-0.5 py-1 font-mincho text-[12px] font-bold tracking-widest text-white">
+                    {DETAIL_LABELS[key]}
                   </span>
-                  <span className="min-w-0 text-sm leading-relaxed text-gray-700">
+                  <span className="vertical-rl mt-2 whitespace-nowrap font-mincho text-[13px] leading-[1.5] sm:text-[15px] text-gray-800">
                     {finalResult.details[key]}
                   </span>
                 </div>
               ))}
-            </div>
+            </section>
 
-            <div className="mt-6 grid grid-cols-3 gap-2 font-mincho text-center">
-              {[
-                { label: "吉方位", value: finalResult.lucky.direction },
-                { label: "幸運の色", value: finalResult.lucky.color },
-                { label: "幸運の品", value: finalResult.lucky.item },
-              ].map((lucky) => (
-                <div
-                  key={lucky.label}
-                  className="rounded border border-red-100 bg-red-50/60 px-1 py-2"
-                >
-                  <div className="text-[11px] tracking-widest text-red-800">
-                    {lucky.label}
+            {/* 吉方位・幸運の色・幸運の品 */}
+            <section className="flex items-center gap-3 pt-3">
+              <dl className="grid min-w-0 flex-1 grid-cols-3 gap-1.5 font-mincho">
+                {[
+                  { label: "吉方位", value: finalResult.lucky.direction },
+                  { label: "幸運の色", value: finalResult.lucky.color },
+                  { label: "幸運の品", value: finalResult.lucky.item },
+                ].map((lucky) => (
+                  <div
+                    key={lucky.label}
+                    className="border border-[#b91c1c]/40 px-1 py-1.5 text-center"
+                  >
+                    <dt className="text-[10px] tracking-widest text-[#b91c1c]">
+                      {lucky.label}
+                    </dt>
+                    <dd className="mt-0.5 text-[13px] font-bold text-gray-800">
+                      {lucky.value}
+                    </dd>
                   </div>
-                  <div className="mt-1 break-keep text-sm font-bold text-gray-800">
-                    {lucky.value}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </dl>
+              <div
+                aria-hidden
+                className="omikuji-seal flex h-14 w-14 shrink-0 -rotate-6 items-center justify-center"
+              >
+                <span className="font-brush text-center text-[13px] leading-tight text-white">
+                  一撃
+                  <br />
+                  必中
+                </span>
+              </div>
+            </section>
           </div>
         </div>
+
 
         <div className="z-10 mt-8 flex w-full max-w-md flex-col justify-center gap-4 sm:flex-row">
           <button
