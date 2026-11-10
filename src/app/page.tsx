@@ -2,9 +2,18 @@
 import type { JSX } from "react";
 
 export const dynamic = "force-dynamic";
-import { Suspense, useEffect, useRef, useState } from "react";
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import nextDynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { RefreshCw, Share2, Volume2, VolumeX } from "lucide-react";
+import { RefreshCw, Share2, TreePine, Volume2, VolumeX } from "lucide-react";
+import type { TieOmikujiData } from "./TieOmikuji";
 import {
   DETAIL_LABELS,
   FORTUNE_RANKS,
@@ -14,6 +23,25 @@ import {
   type DetailKey,
   type FortuneTone,
 } from "./fortunes";
+
+// three.js を使う演出はPCで開いたときだけ読み込む
+const TieOmikuji = nextDynamic(() => import("./TieOmikuji"), { ssr: false });
+
+const DESKTOP_QUERY = "(min-width: 1024px) and (pointer: fine)";
+const subscribeDesktop = (onChange: () => void) => {
+  const mql = window.matchMedia(DESKTOP_QUERY);
+  mql.addEventListener("change", onChange);
+  return () => mql.removeEventListener("change", onChange);
+};
+const getIsDesktop = () => window.matchMedia(DESKTOP_QUERY).matches;
+const getIsDesktopServer = () => false;
+
+const TONE_HEX: Record<FortuneTone, string> = {
+  great: "#b91c1c",
+  good: "#b91c1c",
+  middle: "#92400e",
+  bad: "#334155",
+};
 
 type FortuneResult = {
   rank: string;
@@ -205,6 +233,26 @@ function HomeContent() {
     (FortuneResult & { avgScore: number }) | null
   >(null);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const [showTie, setShowTie] = useState(false);
+  const isDesktop = useSyncExternalStore(
+    subscribeDesktop,
+    getIsDesktop,
+    getIsDesktopServer
+  );
+  const tieData = useMemo<TieOmikujiData | null>(() => {
+    if (!finalResult) return null;
+    return {
+      rank: finalResult.rank,
+      rankColor: TONE_HEX[finalResult.tone],
+      ticket: toKanjiNumber(finalResult.ticketNumber),
+      waka: finalResult.waka,
+      translation: finalResult.translation,
+      details: (Object.keys(DETAIL_LABELS) as DetailKey[]).map((key) => ({
+        label: DETAIL_LABELS[key],
+        value: finalResult.details[key],
+      })),
+    };
+  }, [finalResult]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const requestRef = useRef<number | null>(null);
@@ -682,7 +730,7 @@ function HomeContent() {
         </div>
 
 
-        <div className="z-10 mt-8 flex w-full max-w-md flex-col justify-center gap-4 sm:flex-row">
+        <div className="z-10 mt-8 flex w-full max-w-md flex-col justify-center gap-4 sm:max-w-2xl sm:flex-row">
           <button
             onClick={() => {
               clearSharedParams();
@@ -692,6 +740,14 @@ function HomeContent() {
           >
             <RefreshCw size={18} /> もう一度挑む
           </button>
+          {isDesktop && (
+            <button
+              onClick={() => setShowTie(true)}
+              className="flex items-center justify-center gap-2 rounded bg-emerald-800 px-6 py-3 font-mincho text-white shadow transition hover:bg-emerald-700"
+            >
+              <TreePine size={18} /> 木に結ぶ
+            </button>
+          )}
           <button
             onClick={shareResult}
             className="flex items-center justify-center gap-2 rounded bg-red-700 px-6 py-3 font-mincho text-white shadow transition hover:bg-red-600"
@@ -699,6 +755,9 @@ function HomeContent() {
             <Share2 size={18} /> 結果を共有
           </button>
         </div>
+        {isDesktop && showTie && tieData && (
+          <TieOmikuji data={tieData} onClose={() => setShowTie(false)} />
+        )}
         {shareMessage && (
           <div
             role="status"
