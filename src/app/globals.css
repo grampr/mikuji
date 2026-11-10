@@ -260,16 +260,3 @@ body {
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
   opacity: 0.85;
 }
-
-/* おみくじを折る画面 */
-.fold-stage {
-  background: #2a1c14;
-}
-
-.fold-vignette {
-  background: radial-gradient(
-    ellipse at 50% 45%,
-    rgba(0, 0, 0, 0) 45%,
-    rgba(10, 5, 2, 0.55) 100%
-  );
-}

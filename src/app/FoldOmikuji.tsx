@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { RotateCcw, Undo2, X } from "lucide-react";
+import { RotateCcw, Undo2 } from "lucide-react";
 
 export type FoldOmikujiData = {
   rank: string;
@@ -11,14 +11,15 @@ export type FoldOmikujiData = {
   waka: string;
   translation: string;
   details: { label: string; value: string }[];
+  score: string;
+  lucky: { label: string; value: string }[];
 };
 
 type Props = {
   data: FoldOmikujiData;
-  onClose: () => void;
 };
 
-const PAPER = "#f6efdf";
+const PAPER = "#fbf7ee";
 const RED = "#b91c1c";
 
 /* ================= 乱数 ================= */
@@ -37,7 +38,7 @@ const mulberry32 = (seed: number) => {
 /* ================= 札のテクスチャ ================= */
 
 const TEX_W = 600;
-const TEX_H = 1240;
+const TEX_H = 1340;
 const TEX_SCALE = 2;
 
 const ROTATED_CHARS = new Set(["（", "）", "「", "」", "ー", "〜", "…"]);
@@ -117,7 +118,7 @@ const drawSlip = (
   if (!ctx) return canvas;
   ctx.scale(TEX_SCALE, TEX_SCALE);
 
-  ctx.fillStyle = faint ? "#f1e9d8" : PAPER;
+  ctx.fillStyle = faint ? "#f6f0e2" : PAPER;
   ctx.fillRect(0, 0, TEX_W, TEX_H);
   // 裏面は印刷がうっすら透ける程度
   ctx.globalAlpha = faint ? 0.11 : 1;
@@ -225,11 +226,52 @@ const drawSlip = (
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x + 26.6, 824);
-      ctx.lineTo(x + 26.6, TEX_H - 44);
+      ctx.lineTo(x + 26.6, 1206);
       ctx.stroke();
       ctx.restore();
     }
   });
+
+  // 精度
+  ctx.fillStyle = "#6b7280";
+  ctx.font = `15px ${mincho}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(`精度 ${data.score}%`, rankX, rankTop + boxH + 12);
+
+  // 吉方位・幸運の色・幸運の品と朱印
+  ctx.strokeStyle = RED;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(40, 1218);
+  ctx.lineTo(TEX_W - 40, 1218);
+  ctx.stroke();
+  data.lucky.forEach((lucky, i) => {
+    const x = 42 + i * 140;
+    ctx.save();
+    ctx.globalAlpha *= 0.5;
+    ctx.strokeRect(x, 1234, 130, 64);
+    ctx.restore();
+    ctx.fillStyle = RED;
+    ctx.font = `13px ${mincho}`;
+    ctx.fillText(lucky.label, x + 65, 1253);
+    ctx.fillStyle = "#1f2937";
+    ctx.font = `bold 19px ${mincho}`;
+    ctx.fillText(lucky.value, x + 65, 1279);
+  });
+  ctx.save();
+  ctx.translate(516, 1266);
+  ctx.rotate(-0.1);
+  ctx.globalAlpha *= 0.85;
+  ctx.fillStyle = RED;
+  ctx.beginPath();
+  ctx.roundRect(-36, -36, 72, 72, 8);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `19px ${brush}`;
+  ctx.fillText("一撃", 0, -12);
+  ctx.fillText("必中", 0, 13);
+  ctx.restore();
 
   ctx.globalAlpha = 1;
   drawFibers(ctx, TEX_W, TEX_H, 1400, faint ? 11 : 5);
@@ -291,47 +333,6 @@ const drawPaperHeight = (): HTMLCanvasElement => {
   return canvas;
 };
 
-// 机（木目）
-const drawDesk = (): HTMLCanvasElement => {
-  const w = 1024;
-  const h = 1024;
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return canvas;
-  const rnd = mulberry32(77);
-  const plankH = h / 4;
-  for (let p = 0; p < 4; p++) {
-    const tone = 0.86 + rnd() * 0.28;
-    ctx.fillStyle = `rgb(${Math.round(92 * tone)}, ${Math.round(60 * tone)}, ${Math.round(40 * tone)})`;
-    ctx.fillRect(0, p * plankH, w, plankH);
-    // 木目
-    for (let i = 0; i < 70; i++) {
-      const y0 = p * plankH + rnd() * plankH;
-      const dark = rnd() > 0.45;
-      ctx.strokeStyle = dark
-        ? `rgba(38, 22, 12, ${0.06 + rnd() * 0.14})`
-        : `rgba(190, 150, 110, ${0.03 + rnd() * 0.06})`;
-      ctx.lineWidth = 0.6 + rnd() * 1.8;
-      ctx.beginPath();
-      const amp = 1 + rnd() * 3;
-      const freq = 0.001 + rnd() * 0.003;
-      const ph = rnd() * 6;
-      for (let x = 0; x <= w; x += 16) {
-        const y = y0 + Math.sin(x * freq * Math.PI * 2 + ph) * amp;
-        if (x === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-    // 板の継ぎ目
-    ctx.fillStyle = "rgba(20, 10, 6, 0.55)";
-    ctx.fillRect(0, p * plankH, w, 2);
-  }
-  return canvas;
-};
-
 /* ================= 紙の折り ================= */
 
 const PAPER_W = 0.84;
@@ -342,7 +343,9 @@ const VERTS = (NX + 1) * (NY + 1);
 const MAX_FOLDS = 6;
 // 重なった紙どうしのすき間（紙の厚み）
 const LAYER_GAP = 0.0006;
-const PAPER_LIFT = 0.004;
+const PAPER_LIFT = 0.02;
+// 折り目の跡のわずかな盛り上がり
+const CREASE_RIDGE = 0.0028;
 const CREASE_BAND = 0.011;
 
 type Fold = {
@@ -397,19 +400,11 @@ const bend = (
   return true;
 };
 
-export default function FoldOmikuji({ data, onClose }: Props) {
+export default function FoldOmikuji({ data }: Props) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const actionRef = useRef<"undo" | "reset" | null>(null);
   const [foldCount, setFoldCount] = useState(0);
   const [notice, setNotice] = useState<string | null>(null);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -440,58 +435,48 @@ export default function FoldOmikuji({ data, onClose }: Props) {
     const maxAniso = renderer.capabilities.getMaxAnisotropy();
 
     const scene = new THREE.Scene();
-    // 画角を狭くして、机の上の紙を少し手前から見下ろす
+    // 画角を狭くして、置いた札をほぼ真上から見る（紙の高さが表示の約9割になる距離）
+    const FOV = 28;
     const camera = new THREE.PerspectiveCamera(
-      28,
+      FOV,
       mount.clientWidth / mount.clientHeight,
       0.5,
       40
     );
-    const camBase = new THREE.Vector3(0, -1.15, 4.75);
-    const camLook = new THREE.Vector3(0, 0.0, 0);
-    camera.position.copy(camBase);
-    camera.lookAt(camLook);
+    const camDist =
+      PAPER_H / 0.9 / (2 * Math.tan(THREE.MathUtils.degToRad(FOV / 2)));
+    camera.position.set(0, -0.28, camDist);
+    camera.lookAt(0, 0, 0);
 
     /* ----- 光：斜めから当てて、紙の凹凸と折り目の影を出す ----- */
-    scene.add(new THREE.HemisphereLight(0xfff4e4, 0x6b5a4e, 0.75));
-    scene.add(new THREE.AmbientLight(0xffffff, 0.38));
-    const key = new THREE.DirectionalLight(0xfff0dc, 2.1);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xd8cfc4, 1.05));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+    const key = new THREE.DirectionalLight(0xfff6ea, 1.25);
     key.position.set(-3.4, 2.6, 3.0);
     key.target.position.set(0, 0, 0);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
-    key.shadow.camera.left = -1.7;
-    key.shadow.camera.right = 1.7;
-    key.shadow.camera.top = 1.7;
-    key.shadow.camera.bottom = -1.7;
+    key.shadow.camera.left = -2;
+    key.shadow.camera.right = 2;
+    key.shadow.camera.top = 2;
+    key.shadow.camera.bottom = -2;
     key.shadow.camera.near = 1;
     key.shadow.camera.far = 12;
     key.shadow.bias = -0.0002;
     key.shadow.normalBias = 0.0015;
-    key.shadow.radius = 5;
+    key.shadow.radius = 7;
     scene.add(key, key.target);
     const fill = new THREE.DirectionalLight(0xdfe8ff, 0.35);
     fill.position.set(3, -2, 3);
     scene.add(fill);
 
-    /* ----- 机 ----- */
-    const deskTex = track(new THREE.CanvasTexture(drawDesk()));
-    deskTex.colorSpace = THREE.SRGBColorSpace;
-    deskTex.wrapS = deskTex.wrapT = THREE.RepeatWrapping;
-    deskTex.repeat.set(2.2, 2.2);
-    deskTex.anisotropy = maxAniso;
-    const desk = new THREE.Mesh(
+    /* ----- 影だけを受ける透明な面（背景はページの和紙がそのまま見える） ----- */
+    const floor = new THREE.Mesh(
       track(new THREE.PlaneGeometry(14, 14)),
-      track(
-        new THREE.MeshStandardMaterial({
-          map: deskTex,
-          roughness: 0.62,
-          metalness: 0,
-        })
-      )
+      track(new THREE.ShadowMaterial({ opacity: 0.38 }))
     );
-    desk.receiveShadow = true;
-    scene.add(desk);
+    floor.receiveShadow = true;
+    scene.add(floor);
 
     /* ----- 紙の質感 ----- */
     const style = getComputedStyle(document.body);
@@ -539,7 +524,7 @@ export default function FoldOmikuji({ data, onClose }: Props) {
     const paperProps = {
       roughness: 0.93,
       metalness: 0,
-      sheen: 0.4,
+      sheen: 0.15,
       sheenRoughness: 0.85,
       sheenColor: new THREE.Color(0xfff6e6),
       bumpMap: heightTex,
@@ -656,7 +641,9 @@ export default function FoldOmikuji({ data, onClose }: Props) {
           positions[o + 2] = cache[o + 2];
         }
         positions[o + 2] +=
-          PAPER_LIFT + (wave(positions[o], positions[o + 1]) + 1) * amp;
+          PAPER_LIFT +
+          (wave(positions[o], positions[o + 1]) + 1) * amp +
+          crease[k] * CREASE_RIDGE;
       }
       posAttr.needsUpdate = true;
       geo.computeVertexNormals();
@@ -694,7 +681,6 @@ export default function FoldOmikuji({ data, onClose }: Props) {
     const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
     const hit = new THREE.Vector3();
     const grab = new THREE.Vector2();
-    const hover = new THREE.Vector2(0, 0);
     let overPaper = false;
 
     const setNdc = (ev: PointerEvent) => {
@@ -707,8 +693,11 @@ export default function FoldOmikuji({ data, onClose }: Props) {
     };
     const pickPaper = () => {
       const hits = raycaster.intersectObjects([front, back], false);
-      return hits.length ? hits[0].point : null;
+      return hits.length ? hits[0] : null;
     };
+    const tri = new THREE.Triangle();
+    const bary = new THREE.Vector3();
+    let peeled: Fold | null = null; // つかんで持ち上げた、直前の折り
 
     const updatePreview = () => {
       if (!raycaster.ray.intersectPlane(plane, hit)) return;
@@ -743,8 +732,8 @@ export default function FoldOmikuji({ data, onClose }: Props) {
           if (z > zS) zS = z;
         }
       }
-      // 折り目が紙にかかっていなければ折れない
-      if (moving < 220 || staying < 220) {
+      // 折り目が紙にかかっていない、または紙の大半が裏返ってしまう折りは無効
+      if (moving < 220 || staying < 220 || moving > VERTS * 0.62) {
         if (live) {
           live = null;
           writePositions();
@@ -769,21 +758,55 @@ export default function FoldOmikuji({ data, onClose }: Props) {
     const onDown = (ev: PointerEvent) => {
       if (mode !== "idle") return;
       setNdc(ev);
-      const p = pickPaper();
-      if (!p) return;
-      if (folds.length >= MAX_FOLDS) {
-        showNotice("これ以上は厚くて折れません");
-        return;
-      }
-      grab.set(p.x, p.y);
-      mode = "drag";
+      const picked = pickPaper();
+      if (!picked || !picked.face) return;
+      const p = picked.point;
+      peeled = null;
       live = null;
+
+      // 直前に折った部分をつかんだら、その折りを持ち上げて戻せる／折り直せる
+      if (folds.length) {
+        const lastFold = folds[folds.length - 1];
+        const { a, b, c } = picked.face;
+        tri.a.fromArray(positions, a * 3);
+        tri.b.fromArray(positions, b * 3);
+        tri.c.fromArray(positions, c * 3);
+        tri.getBarycoord(p, bary);
+        rebuildCache(folds.length - 1);
+        // つかんだ点の、折る前の位置
+        const gx =
+          cache[a * 3] * bary.x + cache[b * 3] * bary.y + cache[c * 3] * bary.z;
+        const gy =
+          cache[a * 3 + 1] * bary.x +
+          cache[b * 3 + 1] * bary.y +
+          cache[c * 3 + 1] * bary.z;
+        const shift = (lastFold.rho * lastFold.theta) / 2;
+        const d =
+          (gx - lastFold.mx) * lastFold.nx +
+          (gy - lastFold.my) * lastFold.ny +
+          shift;
+        if (d > 0.004) {
+          peeled = folds.pop() ?? null;
+          live = peeled;
+          grab.set(gx, gy);
+          setFoldCount(folds.length);
+        } else {
+          rebuildCache(folds.length);
+        }
+      }
+      if (!peeled) {
+        if (folds.length >= MAX_FOLDS) {
+          showNotice("これ以上は厚くて折れません");
+          return;
+        }
+        grab.set(p.x, p.y);
+      }
+      mode = "drag";
       canvasEl.setPointerCapture(ev.pointerId);
       canvasEl.style.cursor = "grabbing";
     };
     const onMove = (ev: PointerEvent) => {
       setNdc(ev);
-      hover.copy(ndc);
       if (mode === "drag") {
         updatePreview();
       } else if (mode === "idle") {
@@ -808,8 +831,11 @@ export default function FoldOmikuji({ data, onClose }: Props) {
         mode = "settle";
         setFoldCount(folds.length);
       } else {
+        // 元の位置まで戻して離した＝広げた（折り目の跡は残る）
         mode = "idle";
+        if (peeled) showNotice("折り目を戻しました");
       }
+      peeled = null;
     };
     canvasEl.addEventListener("pointerdown", onDown);
     canvasEl.addEventListener("pointermove", onMove);
@@ -828,7 +854,6 @@ export default function FoldOmikuji({ data, onClose }: Props) {
 
     /* ----- ループ ----- */
     let last: number | null = null;
-    const camGoal = new THREE.Vector3();
     const frame = (now: number) => {
       if (disposed) return;
       const dt = last === null ? 0 : Math.min((now - last) / 1000, 0.05);
@@ -875,20 +900,6 @@ export default function FoldOmikuji({ data, onClose }: Props) {
         }
       }
 
-      // 視点をわずかに動かして立体感を出す（つかんでいる間は固定）
-      if (mode !== "drag") {
-        camGoal.set(
-          camBase.x + hover.x * 0.22,
-          camBase.y + hover.y * 0.1,
-          camBase.z
-        );
-        if (camera.position.distanceToSquared(camGoal) > 1e-7) {
-          camera.position.lerp(camGoal, damp(dt, 3));
-          camera.lookAt(camLook);
-          needsRender = true;
-        }
-      }
-
       if (needsRender) {
         renderer.render(scene, camera);
         needsRender = false;
@@ -921,65 +932,39 @@ export default function FoldOmikuji({ data, onClose }: Props) {
   }, [data]);
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="おみくじを折る"
-      className="fold-stage fixed inset-0 z-[60] select-none"
-    >
-      <div ref={mountRef} className="absolute inset-0" />
-      <div className="fold-vignette pointer-events-none absolute inset-0" />
+    <div className="relative z-10 flex w-full max-w-5xl select-none flex-col items-center animate-fade-in-up">
+      <div ref={mountRef} className="h-[1000px] w-full" />
 
-      <div className="pointer-events-none absolute left-1/2 top-7 flex -translate-x-1/2 flex-col items-center gap-2 text-center">
-        <p className="font-brush text-3xl tracking-[0.3em] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
-          おみくじを折る
-        </p>
-        <p className="rounded-full bg-black/45 px-4 py-1.5 font-mincho text-sm tracking-widest text-white backdrop-blur">
+      <div className="flex flex-col items-center gap-2">
+        <p className="rounded-full bg-black/55 px-4 py-1.5 font-mincho text-xs tracking-widest text-white">
           {notice ??
-            "紙の角や端をつかんで、折りたいところへドラッグして離す"}
+            "紙をつかんでドラッグすると折れます。折った所をつかんで引くと戻せます"}
         </p>
-      </div>
-
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label="閉じる"
-        className="absolute left-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/85 text-gray-800 shadow-lg transition hover:bg-white"
-      >
-        <X size={20} />
-      </button>
-
-      <div className="absolute bottom-7 left-1/2 flex -translate-x-1/2 items-center gap-3">
-        <span className="rounded-full bg-black/45 px-4 py-2 font-mincho text-xs tracking-widest text-white backdrop-blur">
-          折り {foldCount} / {MAX_FOLDS}
-        </span>
-        <button
-          type="button"
-          disabled={foldCount === 0}
-          onClick={() => {
-            actionRef.current = "undo";
-          }}
-          className="flex items-center gap-2 rounded-full bg-white/90 px-5 py-2 font-mincho text-sm text-gray-800 shadow transition hover:bg-white disabled:opacity-40"
-        >
-          <Undo2 size={16} /> ひとつ戻す
-        </button>
-        <button
-          type="button"
-          disabled={foldCount === 0}
-          onClick={() => {
-            actionRef.current = "reset";
-          }}
-          className="flex items-center gap-2 rounded-full bg-white/90 px-5 py-2 font-mincho text-sm text-gray-800 shadow transition hover:bg-white disabled:opacity-40"
-        >
-          <RotateCcw size={16} /> 広げる
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-full bg-red-700 px-6 py-2 font-mincho text-sm text-white shadow transition hover:bg-red-600"
-        >
-          結果に戻る
-        </button>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-black/55 px-3 py-1.5 font-mincho text-xs tracking-widest text-white">
+            折り {foldCount} / {MAX_FOLDS}
+          </span>
+          <button
+            type="button"
+            disabled={foldCount === 0}
+            onClick={() => {
+              actionRef.current = "undo";
+            }}
+            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 font-mincho text-xs text-gray-800 shadow transition hover:bg-gray-50 disabled:opacity-40"
+          >
+            <Undo2 size={14} /> ひとつ戻す
+          </button>
+          <button
+            type="button"
+            disabled={foldCount === 0}
+            onClick={() => {
+              actionRef.current = "reset";
+            }}
+            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 font-mincho text-xs text-gray-800 shadow transition hover:bg-gray-50 disabled:opacity-40"
+          >
+            <RotateCcw size={14} /> 全部広げる
+          </button>
+        </div>
       </div>
     </div>
   );

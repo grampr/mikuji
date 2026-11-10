@@ -12,7 +12,7 @@ import {
 } from "react";
 import nextDynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { Hand, RefreshCw, Share2, Volume2, VolumeX } from "lucide-react";
+import { RefreshCw, Share2, Volume2, VolumeX } from "lucide-react";
 import type { FoldOmikujiData } from "./FoldOmikuji";
 import {
   DETAIL_LABELS,
@@ -233,7 +233,6 @@ function HomeContent() {
     (FortuneResult & { avgScore: number }) | null
   >(null);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
-  const [showTie, setShowTie] = useState(false);
   const isDesktop = useSyncExternalStore(
     subscribeDesktop,
     getIsDesktop,
@@ -251,6 +250,12 @@ function HomeContent() {
         label: DETAIL_LABELS[key],
         value: finalResult.details[key],
       })),
+      score: finalResult.avgScore.toFixed(1),
+      lucky: [
+        { label: "吉方位", value: finalResult.lucky.direction },
+        { label: "幸運の色", value: finalResult.lucky.color },
+        { label: "幸運の品", value: finalResult.lucky.item },
+      ],
     };
   }, [finalResult]);
 
@@ -618,6 +623,10 @@ function HomeContent() {
     content = (
       <div className="washi-texture flex min-h-screen flex-col items-center px-4 pb-10 pt-20">
         <SakuraEffect />
+        {/* PCでは札そのものを3Dの紙にして、その場で折れるようにする */}
+        {isDesktop && tieData ? (
+          <FoldOmikuji data={tieData} />
+        ) : (
         <div className="omikuji-slip relative z-10 w-full max-w-md animate-fade-in-up">
           <div className="omikuji-frame px-3 pb-4 pt-3 sm:px-5 sm:pb-6 sm:pt-4">
             {/* 札の頭：社名・御神籤・札番号 */}
@@ -728,7 +737,7 @@ function HomeContent() {
             </section>
           </div>
         </div>
-
+        )}
 
         <div className="z-10 mt-8 flex w-full max-w-md flex-col justify-center gap-4 sm:max-w-2xl sm:flex-row">
           <button
@@ -740,14 +749,6 @@ function HomeContent() {
           >
             <RefreshCw size={18} /> もう一度挑む
           </button>
-          {isDesktop && (
-            <button
-              onClick={() => setShowTie(true)}
-              className="flex items-center justify-center gap-2 rounded bg-amber-800 px-6 py-3 font-mincho text-white shadow transition hover:bg-amber-700"
-            >
-              <Hand size={18} /> 手に取って折る
-            </button>
-          )}
           <button
             onClick={shareResult}
             className="flex items-center justify-center gap-2 rounded bg-red-700 px-6 py-3 font-mincho text-white shadow transition hover:bg-red-600"
@@ -755,9 +756,6 @@ function HomeContent() {
             <Share2 size={18} /> 結果を共有
           </button>
         </div>
-        {isDesktop && showTie && tieData && (
-          <FoldOmikuji data={tieData} onClose={() => setShowTie(false)} />
-        )}
         {shareMessage && (
           <div
             role="status"
