@@ -19,8 +19,33 @@ const mulberry32 = (seed: number) => {
 };
 
 const STAMPS = ["壱", "弐", "参", "奥義"];
-const CONFETTI_COLORS = ["#fbbf24", "#f59e0b", "#dc2626", "#ffffff", "#16a34a", "#7c3aed"];
-const FIREWORK_COLORS = ["#fde68a", "#f87171", "#f0abfc", "#93c5fd", "#86efac"];
+
+// 飛ぶ鶴（左向き）。翼だけを羽ばたかせる
+const Crane = () => (
+  <svg viewBox="0 0 220 140" className="perfect-crane-svg" aria-hidden>
+    {/* 脚 */}
+    <path d="M150 78 L212 88" stroke="#3f3f46" strokeWidth="3" strokeLinecap="round" />
+    {/* 尾 */}
+    <path d="M138 66 L172 72 L140 82 Z" fill="#18181b" />
+    {/* 奥の翼 */}
+    <g className="perfect-wing perfect-wing-back">
+      <path d="M100 68 Q112 22 162 14 Q146 44 132 70 Z" fill="#e5e7eb" />
+      <path d="M140 22 Q152 16 162 14 Q154 30 146 42 Z" fill="#18181b" />
+    </g>
+    {/* 胴・首・頭 */}
+    <ellipse cx="118" cy="72" rx="36" ry="12" fill="#ffffff" />
+    <path d="M90 70 Q60 62 30 44" stroke="#ffffff" strokeWidth="8" strokeLinecap="round" fill="none" />
+    <path d="M62 60 Q46 53 30 44" stroke="#18181b" strokeWidth="5" strokeLinecap="round" fill="none" />
+    <circle cx="27" cy="43" r="7" fill="#ffffff" />
+    <circle cx="28" cy="38.5" r="4" fill="#dc2626" />
+    <path d="M21 44 L2 48" stroke="#52525b" strokeWidth="3" strokeLinecap="round" />
+    {/* 手前の翼 */}
+    <g className="perfect-wing">
+      <path d="M96 70 Q104 8 168 0 Q150 40 136 74 Z" fill="#ffffff" />
+      <path d="M140 12 Q156 3 168 0 Q160 20 150 38 Z" fill="#18181b" />
+    </g>
+  </svg>
+);
 
 // 太鼓と鈴っぽい音を Web Audio で鳴らす（音声ファイルは増やさない）
 const playFanfare = () => {
@@ -88,32 +113,30 @@ export default function PerfectCelebration({ soundOn, onDone }: Props) {
     };
   }, [soundOn, onDone]);
 
-  const { coins, confetti, fireworks } = useMemo(() => {
-    const rnd = mulberry32(8888);
+  const { cranes, flakes, clouds } = useMemo(() => {
+    const rnd = mulberry32(2026);
     return {
-      coins: Array.from({ length: 26 }, () => ({
+      cranes: [
+        { top: 16, size: 150, delay: 2.0, dur: 9 },
+        { top: 27, size: 104, delay: 2.9, dur: 10.5 },
+        { top: 9, size: 84, delay: 3.6, dur: 12 },
+        { top: 36, size: 120, delay: 4.6, dur: 9.8 },
+        { top: 21, size: 70, delay: 5.4, dur: 13 },
+      ],
+      flakes: Array.from({ length: 46 }, () => ({
         left: rnd() * 100,
-        delay: 1.5 + rnd() * 3.5,
-        duration: 2.2 + rnd() * 1.8,
-        size: 26 + rnd() * 26,
-        spin: 0.5 + rnd() * 0.7,
+        delay: 1.5 + rnd() * 5,
+        duration: 4 + rnd() * 4,
+        size: 5 + rnd() * 9,
+        sway: (rnd() - 0.5) * 140,
       })),
-      confetti: Array.from({ length: 70 }, () => ({
-        left: rnd() * 100,
-        delay: 1.4 + rnd() * 4,
-        duration: 2.6 + rnd() * 2.4,
-        color: CONFETTI_COLORS[Math.floor(rnd() * CONFETTI_COLORS.length)],
-        w: 6 + rnd() * 8,
-        h: 10 + rnd() * 12,
-        sway: (rnd() - 0.5) * 160,
-      })),
-      fireworks: Array.from({ length: 7 }, (_, i) => ({
-        left: 8 + rnd() * 84,
-        top: 8 + rnd() * 50,
-        delay: 1.5 + i * 0.42 + rnd() * 0.2,
-        color: FIREWORK_COLORS[i % FIREWORK_COLORS.length],
-        dist: 70 + rnd() * 80,
-      })),
+      clouds: [
+        { top: 12, left: -6, width: 42, delay: 0 },
+        { top: 22, left: 62, width: 46, delay: -6 },
+        { top: 44, left: -12, width: 38, delay: -3 },
+        { top: 52, left: 70, width: 40, delay: -9 },
+        { top: 66, left: 18, width: 30, delay: -12 },
+      ],
     };
   }, []);
 
@@ -125,75 +148,119 @@ export default function PerfectCelebration({ soundOn, onDone }: Props) {
       onClick={onDone}
       className="perfect-root fixed inset-0 z-[80] cursor-pointer select-none overflow-hidden"
     >
-      {/* 後光 */}
-      <div aria-hidden className="perfect-rays" />
-      <div aria-hidden className="perfect-rays perfect-rays-2" />
-      <div aria-hidden className="perfect-glow" />
+      {/* 夜明けの空 */}
+      <div aria-hidden className="perfect-sky" />
+      <div aria-hidden className="perfect-night" />
 
-      {/* 花火 */}
-      {fireworks.map((fw, i) => (
+      {/* 初日の出 */}
+      <div aria-hidden className="perfect-sun-wrap">
+        <div className="perfect-sun-rays" />
+        <div className="perfect-sun-glow" />
+        <div className="perfect-sun" />
+      </div>
+
+      {/* 霞 */}
+      {clouds.map((cloud, i) => (
         <div
-          key={`fw${i}`}
+          key={`cloud${i}`}
           aria-hidden
-          className="perfect-firework"
+          className="perfect-kasumi"
           style={
             {
-              left: `${fw.left}%`,
-              top: `${fw.top}%`,
-              "--delay": `${fw.delay}s`,
-              "--dist": `${fw.dist}px`,
-              color: fw.color,
+              top: `${cloud.top}%`,
+              left: `${cloud.left}%`,
+              width: `${cloud.width}%`,
+              "--delay": `${cloud.delay}s`,
             } as CSSProperties
           }
         >
-          {Array.from({ length: 16 }, (_, k) => (
-            <i key={k} style={{ "--a": `${k * 22.5}deg` } as CSSProperties} />
-          ))}
+          <span />
+          <span />
+          <span />
         </div>
       ))}
 
-      {/* 小判と紙吹雪 */}
-      {coins.map((coin, i) => (
-        <span
-          key={`coin${i}`}
+      {/* 富士山 */}
+      <svg
+        aria-hidden
+        className="perfect-fuji"
+        viewBox="0 0 1200 520"
+        preserveAspectRatio="xMidYMax slice"
+      >
+        <defs>
+          <linearGradient id="fujiBody" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#3b4a8c" />
+            <stop offset="0.55" stopColor="#232f66" />
+            <stop offset="1" stopColor="#141b40" />
+          </linearGradient>
+          <linearGradient id="fujiGlow" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fb7185" stopOpacity="0.75" />
+            <stop offset="0.6" stopColor="#f97316" stopOpacity="0.25" />
+            <stop offset="1" stopColor="#f97316" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path
+          id="fujiShape"
+          d="M0 520 L0 452 C190 426 372 318 512 150 L540 118 Q600 100 660 118 L688 150 C828 318 1010 426 1200 452 L1200 520 Z"
+          fill="url(#fujiBody)"
+        />
+        {/* 朝日に染まる赤富士 */}
+        <path
+          className="perfect-fuji-red"
+          d="M0 520 L0 452 C190 426 372 318 512 150 L540 118 Q600 100 660 118 L688 150 C828 318 1010 426 1200 452 L1200 520 Z"
+          fill="url(#fujiGlow)"
+        />
+        {/* 冠雪 */}
+        <path
+          d="M512 150 L540 118 Q600 100 660 118 L688 150 L716 190 L684 176 L664 214 L634 180 L600 226 L566 180 L536 214 L516 176 L484 190 Z"
+          fill="#ffffff"
+        />
+      </svg>
+
+      {/* 青海波 */}
+      <div aria-hidden className="perfect-seigaiha" />
+
+      {/* 鶴 */}
+      {cranes.map((crane, i) => (
+        <div
+          key={`crane${i}`}
           aria-hidden
-          className="perfect-coin font-brush"
+          className="perfect-crane"
           style={
             {
-              left: `${coin.left}%`,
-              width: `${coin.size}px`,
-              height: `${coin.size * 1.45}px`,
-              fontSize: `${coin.size * 0.55}px`,
-              "--delay": `${coin.delay}s`,
-              "--dur": `${coin.duration}s`,
-              "--spin": `${coin.spin}s`,
+              top: `${crane.top}%`,
+              width: `${crane.size}px`,
+              "--delay": `${crane.delay}s`,
+              "--dur": `${crane.dur}s`,
+              "--flap": `${0.55 + (i % 3) * 0.08}s`,
             } as CSSProperties
           }
         >
-          吉
-        </span>
+          <Crane />
+        </div>
       ))}
-      {confetti.map((c, i) => (
+
+      {/* 金箔 */}
+      {flakes.map((flake, i) => (
         <span
-          key={`cf${i}`}
+          key={`flake${i}`}
           aria-hidden
-          className="perfect-confetti"
+          className="perfect-flake"
           style={
             {
-              left: `${c.left}%`,
-              width: `${c.w}px`,
-              height: `${c.h}px`,
-              background: c.color,
-              "--delay": `${c.delay}s`,
-              "--dur": `${c.duration}s`,
-              "--sway": `${c.sway}px`,
+              left: `${flake.left}%`,
+              width: `${flake.size}px`,
+              height: `${flake.size}px`,
+              "--delay": `${flake.delay}s`,
+              "--dur": `${flake.duration}s`,
+              "--sway": `${flake.sway}px`,
             } as CSSProperties
           }
         />
       ))}
 
-      {/* 本体 */}
-      <div className="perfect-stage absolute inset-0 flex flex-col items-center justify-center gap-5 px-4 text-center sm:gap-7">
+      {/* 文字 */}
+      <div className="perfect-stage absolute inset-x-0 top-[7%] flex flex-col items-center gap-4 px-4 text-center sm:top-[6%] sm:gap-6">
         <div className="flex gap-2 sm:gap-4">
           {STAMPS.map((label, i) => (
             <div
@@ -217,18 +284,21 @@ export default function PerfectCelebration({ soundOn, onDone }: Props) {
         </div>
 
         <p className="perfect-sub font-brush">
-          <span className="perfect-rainbow">神業</span>
+          <span className="perfect-pill">神業</span>
           <span className="mx-2 sm:mx-3">精度 一〇〇％ ×４</span>
-          <span className="perfect-rainbow">天晴</span>
-        </p>
-
-        <p className="perfect-tap font-mincho">
-          画面を押して、おみくじを開く
+          <span className="perfect-pill">天晴</span>
         </p>
       </div>
 
+      {/* 短冊 */}
+      <div aria-hidden className="perfect-tanzaku font-brush">
+        初日の出
+      </div>
+
+      <p className="perfect-tap font-mincho">画面を押して、おみくじを開く</p>
+
       <div aria-hidden className="perfect-flash" />
-      <div aria-hidden className="perfect-border" />
+      <div aria-hidden className="perfect-frame" />
     </div>
   );
 }
