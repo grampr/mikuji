@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { RotateCcw, Undo2 } from "lucide-react";
 
 export type FoldOmikujiData = {
   rank: string;
@@ -402,9 +401,6 @@ const bend = (
 
 export default function FoldOmikuji({ data }: Props) {
   const mountRef = useRef<HTMLDivElement | null>(null);
-  const actionRef = useRef<"undo" | "reset" | null>(null);
-  const [foldCount, setFoldCount] = useState(0);
-  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -412,18 +408,11 @@ export default function FoldOmikuji({ data }: Props) {
 
     let disposed = false;
     let raf = 0;
-    let noticeTimer: ReturnType<typeof setTimeout> | null = null;
     const disposables: { dispose: () => void }[] = [];
     const track = <T extends { dispose: () => void }>(item: T): T => {
       disposables.push(item);
       return item;
     };
-    const showNotice = (text: string) => {
-      setNotice(text);
-      if (noticeTimer) clearTimeout(noticeTimer);
-      noticeTimer = setTimeout(() => setNotice(null), 2200);
-    };
-
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
@@ -601,8 +590,7 @@ export default function FoldOmikuji({ data }: Props) {
     const folds: Fold[] = [];
     let baked = 0; // cache に焼き込み済みの折りの数
     let live: Fold | null = null; // いま動いている折り（プレビュー・確定中・戻し中）
-    let mode: "idle" | "drag" | "settle" | "undo" = "idle";
-    let undoAll = false;
+    let mode: "idle" | "drag" | "settle" = "idle";
     const tmp = new Float32Array(3);
 
     const rebuildCache = (count: number) => {
@@ -789,16 +777,13 @@ export default function FoldOmikuji({ data }: Props) {
           peeled = folds.pop() ?? null;
           live = peeled;
           grab.set(gx, gy);
-          setFoldCount(folds.length);
         } else {
           rebuildCache(folds.length);
         }
       }
       if (!peeled) {
-        if (folds.length >= MAX_FOLDS) {
-          showNotice("これ以上は厚くて折れません");
-          return;
-        }
+        // これ以上は厚くて折れない
+        if (folds.length >= MAX_FOLDS) return;
         grab.set(p.x, p.y);
       }
       mode = "drag";
@@ -829,11 +814,9 @@ export default function FoldOmikuji({ data }: Props) {
         // 折り目を押さえて確定する
         folds.push(live);
         mode = "settle";
-        setFoldCount(folds.length);
       } else {
         // 元の位置まで戻して離した＝広げた（折り目の跡は残る）
         mode = "idle";
-        if (peeled) showNotice("折り目を戻しました");
       }
       peeled = null;
     };
@@ -842,30 +825,12 @@ export default function FoldOmikuji({ data }: Props) {
     canvasEl.addEventListener("pointerup", onUp);
     canvasEl.addEventListener("pointercancel", onUp);
 
-    const startUndo = () => {
-      if (!folds.length) {
-        undoAll = false;
-        return;
-      }
-      rebuildCache(folds.length - 1);
-      live = folds[folds.length - 1];
-      mode = "undo";
-    };
-
     /* ----- ループ ----- */
     let last: number | null = null;
     const frame = (now: number) => {
       if (disposed) return;
       const dt = last === null ? 0 : Math.min((now - last) / 1000, 0.05);
       last = now;
-
-      if (mode === "idle" && actionRef.current) {
-        undoAll = actionRef.current === "reset";
-        actionRef.current = null;
-        startUndo();
-      } else if (mode !== "idle") {
-        actionRef.current = null;
-      }
 
       if (mode === "settle" && live) {
         live.rho += (live.rhoFinal - live.rho) * damp(dt, 16);
@@ -882,22 +847,6 @@ export default function FoldOmikuji({ data }: Props) {
           mode = "idle";
         }
         writePositions();
-      } else if (mode === "undo" && live) {
-        const speed = undoAll ? 7 : 4.2;
-        live.theta = Math.max(0, live.theta - dt * speed);
-        // 開く途中は少し丸みを持たせる
-        live.rho =
-          live.rhoFinal + Math.sin((live.theta / Math.PI) * Math.PI) * 0.03;
-        if (live.theta <= 0) {
-          folds.pop();
-          live = null;
-          mode = "idle";
-          setFoldCount(folds.length);
-          writePositions();
-          if (undoAll) startUndo();
-        } else {
-          writePositions();
-        }
       }
 
       if (needsRender) {
@@ -919,7 +868,6 @@ export default function FoldOmikuji({ data }: Props) {
     return () => {
       disposed = true;
       cancelAnimationFrame(raf);
-      if (noticeTimer) clearTimeout(noticeTimer);
       window.removeEventListener("resize", onResize);
       canvasEl.removeEventListener("pointerdown", onDown);
       canvasEl.removeEventListener("pointermove", onMove);
@@ -935,37 +883,6 @@ export default function FoldOmikuji({ data }: Props) {
     <div className="relative z-10 flex w-full max-w-5xl select-none flex-col items-center animate-fade-in-up">
       <div ref={mountRef} className="h-[1000px] w-full" />
 
-      <div className="flex flex-col items-center gap-2">
-        <p className="rounded-full bg-black/55 px-4 py-1.5 font-mincho text-xs tracking-widest text-white">
-          {notice ??
-            "紙をつかんでドラッグすると折れます。折った所をつかんで引くと戻せます"}
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-black/55 px-3 py-1.5 font-mincho text-xs tracking-widest text-white">
-            折り {foldCount} / {MAX_FOLDS}
-          </span>
-          <button
-            type="button"
-            disabled={foldCount === 0}
-            onClick={() => {
-              actionRef.current = "undo";
-            }}
-            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 font-mincho text-xs text-gray-800 shadow transition hover:bg-gray-50 disabled:opacity-40"
-          >
-            <Undo2 size={14} /> ひとつ戻す
-          </button>
-          <button
-            type="button"
-            disabled={foldCount === 0}
-            onClick={() => {
-              actionRef.current = "reset";
-            }}
-            className="flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 font-mincho text-xs text-gray-800 shadow transition hover:bg-gray-50 disabled:opacity-40"
-          >
-            <RotateCcw size={14} /> 全部広げる
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
