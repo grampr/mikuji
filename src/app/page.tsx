@@ -4,6 +4,7 @@ import type { JSX } from "react";
 export const dynamic = "force-dynamic";
 import {
   Suspense,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -25,6 +26,9 @@ import {
 } from "./fortunes";
 
 // three.js を使う演出はPCで開いたときだけ読み込む
+const PerfectCelebration = nextDynamic(() => import("./PerfectCelebration"), {
+  ssr: false,
+});
 const FoldOmikuji = nextDynamic(() => import("./FoldOmikuji"), { ssr: false });
 
 const DESKTOP_QUERY = "(min-width: 1024px) and (pointer: fine)";
@@ -233,6 +237,9 @@ function HomeContent() {
     (FortuneResult & { avgScore: number }) | null
   >(null);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  // 4回すべて100%だったときの特別演出
+  const [showPerfect, setShowPerfect] = useState(false);
+  const closePerfect = useCallback(() => setShowPerfect(false), []);
   const isDesktop = useSyncExternalStore(
     subscribeDesktop,
     getIsDesktop,
@@ -383,8 +390,10 @@ function HomeContent() {
     const result = pickFortune(avgScore);
     setFinalResult({ ...result, avgScore });
     setView("shaking");
+    const perfect = finalScores.every((value) => value >= 100);
     setTimeout(() => {
       setView("result");
+      if (perfect) setShowPerfect(true);
     }, 2500);
   };
 
@@ -756,6 +765,9 @@ function HomeContent() {
             <Share2 size={18} /> 結果を共有
           </button>
         </div>
+        {showPerfect && (
+          <PerfectCelebration soundOn={isAudioOn} onDone={closePerfect} />
+        )}
         {shareMessage && (
           <div
             role="status"
