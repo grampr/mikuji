@@ -12,8 +12,8 @@ import {
 } from "react";
 import nextDynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { RefreshCw, Share2, TreePine, Volume2, VolumeX } from "lucide-react";
-import type { TieOmikujiData } from "./TieOmikuji";
+import { Hand, RefreshCw, Share2, Volume2, VolumeX } from "lucide-react";
+import type { FoldOmikujiData } from "./FoldOmikuji";
 import {
   DETAIL_LABELS,
   FORTUNE_RANKS,
@@ -25,7 +25,7 @@ import {
 } from "./fortunes";
 
 // three.js を使う演出はPCで開いたときだけ読み込む
-const TieOmikuji = nextDynamic(() => import("./TieOmikuji"), { ssr: false });
+const FoldOmikuji = nextDynamic(() => import("./FoldOmikuji"), { ssr: false });
 
 const DESKTOP_QUERY = "(min-width: 1024px) and (pointer: fine)";
 const subscribeDesktop = (onChange: () => void) => {
@@ -239,7 +239,7 @@ function HomeContent() {
     getIsDesktop,
     getIsDesktopServer
   );
-  const tieData = useMemo<TieOmikujiData | null>(() => {
+  const tieData = useMemo<FoldOmikujiData | null>(() => {
     if (!finalResult) return null;
     return {
       rank: finalResult.rank,
@@ -743,9 +743,9 @@ function HomeContent() {
           {isDesktop && (
             <button
               onClick={() => setShowTie(true)}
-              className="flex items-center justify-center gap-2 rounded bg-emerald-800 px-6 py-3 font-mincho text-white shadow transition hover:bg-emerald-700"
+              className="flex items-center justify-center gap-2 rounded bg-amber-800 px-6 py-3 font-mincho text-white shadow transition hover:bg-amber-700"
             >
-              <TreePine size={18} /> 木に結ぶ
+              <Hand size={18} /> 手に取って折る
             </button>
           )}
           <button
@@ -756,7 +756,7 @@ function HomeContent() {
           </button>
         </div>
         {isDesktop && showTie && tieData && (
-          <TieOmikuji data={tieData} onClose={() => setShowTie(false)} />
+          <FoldOmikuji data={tieData} onClose={() => setShowTie(false)} />
         )}
         {shareMessage && (
           <div
