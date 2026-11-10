@@ -271,3 +271,100 @@ body {
     #fde6c4 100%
   );
 }
+
+/* 操作する場所の目印（3Dの位置に追従） */
+.tie-hint {
+  transition: opacity 0.25s ease;
+  will-change: transform;
+}
+
+.tie-hint-ring {
+  position: absolute;
+  left: -18px;
+  top: -18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 14px rgba(255, 224, 138, 0.9);
+  animation: tieHintPulse 1.4s ease-in-out infinite;
+}
+
+.tie-hint-arrow {
+  position: absolute;
+  left: -10px;
+  top: -10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.tie-hint[data-kind="fold"] .tie-hint-arrow {
+  animation: tieHintLeft 1.6s ease-in-out infinite;
+}
+
+.tie-hint[data-kind="carry"] .tie-hint-arrow {
+  animation: tieHintUp 1.6s ease-in-out infinite;
+}
+
+.tie-hint[data-kind="tie"] .tie-hint-arrow {
+  animation: tieHintCircle 1.6s linear infinite;
+}
+
+@keyframes tieHintPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.35;
+  }
+}
+
+@keyframes tieHintLeft {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-110px);
+    opacity: 0;
+  }
+}
+
+@keyframes tieHintUp {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-60px, -90px);
+    opacity: 0;
+  }
+}
+
+@keyframes tieHintCircle {
+  from {
+    transform: rotate(0deg) translateX(34px);
+  }
+  to {
+    transform: rotate(360deg) translateX(34px);
+  }
+}
