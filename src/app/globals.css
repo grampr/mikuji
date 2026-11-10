@@ -237,3 +237,462 @@ body {
 .waframe button {
   pointer-events: auto;
 }
+
+/* おみくじの札 */
+.omikuji-slip {
+  background-color: #fbf7ee;
+  background-image: url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  box-shadow:
+    0 20px 40px rgba(60, 30, 10, 0.18),
+    0 2px 6px rgba(60, 30, 10, 0.12);
+  padding: 10px;
+}
+
+.omikuji-frame {
+  border: 4px double #b91c1c;
+  outline: 1px solid rgba(185, 28, 28, 0.35);
+  outline-offset: 3px;
+}
+
+.omikuji-seal {
+  background: #b91c1c;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+  opacity: 0.85;
+}
+
+/* ===== 全弾必中（4回とも100%）の特別演出 ===== */
+.perfect-root {
+  background: radial-gradient(circle at 50% 45%, #7f1010 0%, #2a0505 55%, #0b0101 100%);
+  animation: perfectShake 0.5s 1.45s both;
+}
+
+.perfect-rays {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 240vmax;
+  height: 240vmax;
+  margin: -120vmax 0 0 -120vmax;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(253, 224, 71, 0.5) 0deg 7deg,
+    rgba(253, 224, 71, 0) 7deg 18deg
+  );
+  opacity: 0;
+  animation:
+    perfectRaysIn 0.5s 1.45s forwards,
+    perfectSpin 26s linear infinite;
+}
+
+.perfect-rays-2 {
+  background: repeating-conic-gradient(
+    from 9deg,
+    rgba(248, 113, 113, 0.35) 0deg 4deg,
+    rgba(248, 113, 113, 0) 4deg 18deg
+  );
+  animation:
+    perfectRaysIn 0.5s 1.55s forwards,
+    perfectSpin 40s linear infinite reverse;
+}
+
+.perfect-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 45%, rgba(255, 244, 200, 0.75) 0%, rgba(255, 214, 102, 0.25) 22%, rgba(0, 0, 0, 0) 55%);
+  opacity: 0;
+  animation:
+    perfectRaysIn 0.4s 1.45s forwards,
+    perfectPulse 1.1s 1.9s ease-in-out infinite;
+}
+
+.perfect-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  animation:
+    perfectFlash 0.22s 0.15s,
+    perfectFlash 0.22s 0.4s,
+    perfectFlash 0.22s 0.65s,
+    perfectFlash 0.22s 0.9s,
+    perfectFlashBig 0.7s 1.42s;
+}
+
+.perfect-border {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 10px solid transparent;
+  border-image: linear-gradient(120deg, #f87171, #fbbf24, #a3e635, #38bdf8, #c084fc, #f87171) 1;
+  opacity: 0;
+  animation:
+    perfectRaysIn 0.4s 1.6s forwards,
+    perfectHue 2.4s linear infinite;
+}
+
+.perfect-stamp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 4.2rem;
+  height: 5rem;
+  color: #fff7d6;
+  background: linear-gradient(160deg, #dc2626, #7f1d1d);
+  border: 3px solid #fbbf24;
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 2px #7f1d1d,
+    0 0 22px rgba(251, 191, 36, 0.8);
+  opacity: 0;
+  animation: perfectStamp 0.32s var(--delay) cubic-bezier(0.2, 1.6, 0.4, 1) forwards;
+}
+
+@media (min-width: 640px) {
+  .perfect-stamp {
+    width: 6rem;
+    height: 7rem;
+  }
+}
+
+.perfect-title-wrap {
+  position: relative;
+  line-height: 1;
+}
+
+.perfect-title,
+.perfect-title-ghost {
+  font-size: clamp(3.4rem, 15vw, 10.5rem);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  line-height: 1.05;
+}
+
+.perfect-title {
+  position: relative;
+  background: linear-gradient(
+    100deg,
+    #b45309 0%,
+    #fde68a 22%,
+    #ffffff 38%,
+    #fbbf24 52%,
+    #fff7c2 68%,
+    #d97706 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 2px #7f1d1d) drop-shadow(0 6px 0 #7f1d1d) drop-shadow(0 0 26px rgba(253, 224, 71, 0.9));
+  opacity: 0;
+  animation:
+    perfectSlam 0.55s 1.4s cubic-bezier(0.15, 1.5, 0.35, 1) forwards,
+    perfectShine 1.8s 2s linear infinite;
+}
+
+/* 叩きつけた瞬間に広がる残像 */
+.perfect-title-ghost {
+  position: absolute;
+  inset: 0;
+  color: #fff3b0;
+  opacity: 0;
+  pointer-events: none;
+  animation: perfectGhost 0.8s 1.6s ease-out;
+}
+
+.perfect-sub {
+  color: #fff7d6;
+  font-size: clamp(1rem, 3.6vw, 1.9rem);
+  letter-spacing: 0.18em;
+  text-shadow: 0 2px 0 #7f1d1d, 0 0 14px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  animation:
+    perfectPop 0.4s 2.15s cubic-bezier(0.2, 1.7, 0.4, 1) forwards,
+    perfectBob 0.9s 2.6s ease-in-out infinite;
+}
+
+.perfect-rainbow {
+  display: inline-block;
+  padding: 0.1em 0.5em;
+  border-radius: 999px;
+  color: #3b0a0a;
+  text-shadow: none;
+  background: linear-gradient(90deg, #f87171, #fbbf24, #a3e635, #38bdf8, #c084fc, #f87171);
+  background-size: 300% 100%;
+  animation: perfectRainbow 1.6s linear infinite;
+}
+
+.perfect-tap {
+  margin-top: 0.5rem;
+  color: #fff;
+  font-size: 0.85rem;
+  letter-spacing: 0.3em;
+  opacity: 0;
+  animation: perfectBlink 1.1s 3.2s ease-in-out infinite;
+}
+
+.perfect-coin {
+  position: absolute;
+  top: -12vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #92400e;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 35% 30%, #fff7c2, #fbbf24 55%, #b45309);
+  border: 2px solid #b45309;
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.8);
+  opacity: 0;
+  animation:
+    perfectFall var(--dur) var(--delay) linear infinite,
+    perfectFlip var(--spin) linear infinite;
+}
+
+.perfect-confetti {
+  position: absolute;
+  top: -8vh;
+  opacity: 0;
+  animation:
+    perfectConfetti var(--dur) var(--delay) linear infinite,
+    perfectFlip 0.6s linear infinite;
+}
+
+.perfect-firework {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.perfect-firework i {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+  opacity: 0;
+  animation: perfectBurst 1.5s var(--delay) ease-out infinite;
+}
+
+@keyframes perfectSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes perfectRaysIn {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes perfectPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes perfectFlash {
+  0% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes perfectFlashBig {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes perfectHue {
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+
+@keyframes perfectStamp {
+  0% {
+    opacity: 0;
+    transform: scale(3.2) rotate(-18deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-4deg);
+  }
+}
+
+@keyframes perfectSlam {
+  0% {
+    opacity: 0;
+    transform: scale(5) rotate(-6deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.92) rotate(1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-2deg);
+  }
+}
+
+@keyframes perfectGhost {
+  0% {
+    opacity: 0.8;
+    transform: scale(1) rotate(-2deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9) rotate(-2deg);
+  }
+}
+
+@keyframes perfectShine {
+  from {
+    background-position: 125% 0;
+  }
+  to {
+    background-position: -125% 0;
+  }
+}
+
+@keyframes perfectPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes perfectBob {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-5px) scale(1.04);
+  }
+}
+
+@keyframes perfectRainbow {
+  to {
+    background-position: -300% 0;
+  }
+}
+
+@keyframes perfectBlink {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes perfectFall {
+  0% {
+    opacity: 1;
+    translate: 0 0;
+  }
+  100% {
+    opacity: 1;
+    translate: 0 125vh;
+  }
+}
+
+@keyframes perfectConfetti {
+  0% {
+    opacity: 1;
+    translate: 0 0;
+  }
+  100% {
+    opacity: 1;
+    translate: var(--sway) 118vh;
+  }
+}
+
+@keyframes perfectFlip {
+  from {
+    transform: rotateY(0deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateY(360deg) rotateZ(40deg);
+  }
+}
+
+@keyframes perfectBurst {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--a)) translateX(0) scale(1);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--a)) translateX(var(--dist)) scale(0.3);
+  }
+}
+
+@keyframes perfectShake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  15% {
+    transform: translate(-14px, 9px);
+  }
+  30% {
+    transform: translate(12px, -8px);
+  }
+  45% {
+    transform: translate(-9px, -6px);
+  }
+  60% {
+    transform: translate(7px, 6px);
+  }
+  80% {
+    transform: translate(-4px, 2px);
+  }
+}
+
+/* 動きを減らす設定の人には、点滅・揺れ・降り物を出さない */
+@media (prefers-reduced-motion: reduce) {
+  .perfect-root,
+  .perfect-rays,
+  .perfect-glow,
+  .perfect-border,
+  .perfect-title,
+  .perfect-sub,
+  .perfect-stamp,
+  .perfect-tap,
+  .perfect-rainbow {
+    animation: none;
+    opacity: 1;
+  }
+  .perfect-flash,
+  .perfect-coin,
+  .perfect-confetti,
+  .perfect-firework,
+  .perfect-title-ghost {
+    display: none;
+  }
+}
